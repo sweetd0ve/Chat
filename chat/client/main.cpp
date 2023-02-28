@@ -2,8 +2,8 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet.h>
 #include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,20 +12,19 @@
 #include <iostream>
 #include <signal.h>
 
-
-using anmespace std;
+using namespace std;
 
 void PrintHelp() {
-    cout << "====Help===\n"
-         << " <enter> - check for incoming message\n"
-         << " :h      - help\n"
-         << " :ls     - display chat users list\n"
-         << " :to     - switch message reciever\n"
-         << " :q      - quit\n\n";
+    cout << "====Help====\n"
+        << " <enter>  - check for incoming message\n"
+        << " :h       - help\n"
+        << " :ls      - display chat users list\n"
+        << " :to      - switch message reciever\n"
+        << " :q       - quit\n\n"
 }
 
 
-int main(int argc, char** argv) {
+int main(int argc, char**argv) {
     signal(SIGPIPE, SIG_IGN);
 
     string ip;
@@ -51,7 +50,7 @@ int main(int argc, char** argv) {
     }
 
     PrintHelp();
-    string reciever("server");
+    string recieve("server");
     while (true) {
         cout << "[" << login << " -> " << reciever << "] $ ";
         string line;
@@ -61,33 +60,9 @@ int main(int argc, char** argv) {
 
         const vector<TMessageText>& text = client.GetText();
         if (!text.empty()) {
-            cout << "=== New messages ===\n";
-            for (size_t i = 0; i < text.size(); ++i) {
-                cout << text[i].Sender << ": ";
-                cout << text[i].Text << '\n';
-            }
-            cout << '\n';
-        }
+            cout << "======New Message=====\n";
+            for (size_t i = 0; i < text.size(); ++i)
 
-        if (line.empty())
-            continue;
-        if (line == ":ls") {
-            const vector<string>& users = client.GetUsers();
-            cout << "=== Chat users ===\n";
-            for (size_t i = 0; i < users.size(); ++i)
-                cout << users[i] << ((((i + 1) & 3) && i + 1 < users.size()) ? "\t\t" : "\n");
-            cout << '\n';
-        } else if (line == ":to") {
-            cout << "Select dude: ";
-            cin >> reciever;
-            getline(cin, fictive);
-        } else if (line == ":h") {
-            PrintHelp();
-        } else {
-            client.SendText(line, reciever);
         }
     }
-
-    client.SignOut();
-    return 0;
 }

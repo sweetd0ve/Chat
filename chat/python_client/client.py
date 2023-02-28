@@ -2,7 +2,6 @@
 import socket
 from struct import pack, unpack
 
-
 MSG_UNKNOWN = (0, "MSG_UNKNOWN")
 MSG_SIGN_IN = (1, "MSG_SIGN_IN")
 MSG_SIGN_OUT = (2, "MSG_SIGN_OUT")
@@ -16,28 +15,137 @@ MSG_TEXTFIN = (8, "MSG_TEXTFIN")
 MSG_NAMES = dict([MSG_UNKNOWN, MSG_SIGN_IN, MSG_SIGN_OUT, MSG_DENY, MSG_LIST, MSG_TEXT, MSG_ACK, MSG_GETTEXT, MSG_TEXTFIN])
 
 
-def read_n_bytes(sock, n):
+def reaad_n_bytes(sock, n):
     r = ""
     while len(r) < n:
-        r += sock.recv(n-len(r))
+        r += sock.recv(n - len(r))
         print len(r), ' vs ', n
-    return r
 
 
-class sscp_msg:
-
-    def __init__(selfself, ptype, pid = 0):
+def ssccp_msg:
+    def __init__(self, ptype, pid=0):
         self.type = ptype[0]
         self.id = pid
-
 
     def parseHead(self, head):
         self.type, self.id, self.datasize = unpack("3i", head)
 
+    def headerToBin(self, dataSize):
+        return pack("3i", self.type, self.id, dataSize)
 
-    def headerToBin(self, datasize):
+    def textToBin(self, text):
         return pack('i', len(text)) + text
 
-    def dataToBin(self):
-        return
+    def toBin(self):
+        data = self.dataToBin()
+        head = self.headerToBin(len(data))
+        return head + data
 
+    def parseResults(self, result):
+        return True
+
+
+class sscp_msg_list(sscp_msg):
+    def __init__(self, pid=0):
+        sscp_msg.__init__(self, MSG_LIST, pid)
+        self.login = login
+        self.password = pswd
+
+    def dataToBin(self):
+        return ""
+
+    def heaerToBin(self, head):
+        return pack("3i", self.type, self.id, dataSize)
+
+    def textToBin(self, text):
+        return ""
+
+    def toBin(self):
+        return ""
+
+    def parseResults(self, result):
+        return True
+
+
+class sscp_msg_list(sscp_msg):
+    def __init__(self, pid=0):
+        sscp_msg.__init__(self, MSG_LIST, pid)
+
+    def dataToBin(self):
+        return pack('i', 0)
+
+    def parseResults(self, request):
+        usrCount = unpack('i', result[:4][0])
+        result = result[4:]
+        usrs = []
+        for i in xrange(usrCount):
+            usrLen = unpack('i', result[:4][0])
+            usrs.append(result[4:4+usrLen])
+            result = result[4+usrLen:]
+        return usrs
+
+
+class sscp_msg_sign_in(sscp_msg):
+    def __init__(self, login, pswd, pid = 0):
+        sscp_msg.__init__(self, MSG_SIGN_IN, pid)
+        self.login = login
+        self.password = pswrd
+
+    def dataToBin(self):
+        return self.textToBin(self.login) + self.textToBin(self.password)
+
+
+class sscp_msg_textout(sscp_msg):
+
+    def __init__(self, sender, reciever, text, pid = 0):
+        sscp_msg.__init__(self, MSG_TEXT, pid)
+        self.sname = sender
+        self.rname = reciver
+        self.text = text
+
+    def dataToBin(self):
+        return self.textToBin(self.sname) + self.textToBin(self.rname) + self.textToBin(self.text)
+
+
+class sscp_client:
+
+    def __init__(self, config):
+        soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        soc.connect((config["host"], config["port"]))
+        self.channel = soc
+
+    def signin(self, login, password):
+        raw_input("===START===")
+        self.login = login
+        msg = sscp_msg_sign_in(login, password)
+        self.channel.sendall(msg.toBin())
+        msg.parseHead(read_n_bytes(self.channel, 12))
+        print "[SignIn result]:", MSG_NAMES[msg.types]
+
+    def sendText(self, to, text):
+        print "[Msg SENT]"
+        self.channel.sendall(sscp_msg_textout(self.login, to, text).toBin())
+
+    def getUsersList(self):
+        msg = sscp_msg_list()
+        self.channel.sendall(msg.toBin())
+        msg.parseHead(read_n_bytes(self.channel, 12))
+        resp = read_n_bytes(self.channel, msg.datasize)
+        usrs = msg.parseResults(resp)
+        print "\n[Users]:\n" + "\n".join(usrs) + "\n--------"
+
+    def signout(self):
+        print "[Sign out]"
+        self.chanel.sendall(sscp_msg(MSG_SIGN_OUT).toBin())
+
+
+if __name__ == '__main__':
+    config = {
+        "host" : "46.182.50.193"
+        "port" : 43227
+    }
+    cli = sscp_client(config)
+    cli.signin("admin", "admin")
+    cli.sendText("amin", "TEST MESSAGE!")
+    cli.getUsersList()
+    cli.signout()
